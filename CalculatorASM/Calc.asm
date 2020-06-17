@@ -1,5 +1,9 @@
 .386
 .model flat,c
+.data
+num1 dword ?
+num2 dword ?
+resultDiv real8 0.0
 .code
 CalculateByVar proc
 	push ebp
@@ -10,7 +14,7 @@ CalculateByVar proc
 
 	mov eax,[ebp+8] ;eax = n1
 	mov ebx,[ebp+12] ;ebx = n2
-	mov edx,[ebp+16] ;edx = op ,1=add,3=sub,0=mul
+	mov edx,[ebp+16] ;edx = op ,1=add,3=sub,0=mul,5-div
 	
 	cmp edx,1
 	je addition
@@ -18,6 +22,8 @@ CalculateByVar proc
 	je subtraction
 	cmp edx,0
 	je multiplication
+	cmp edx,5
+	je division
 	jmp ending
 
 addition:
@@ -32,9 +38,26 @@ multiplication:
 	imul eax,ebx
 	mov ecx,eax
 	jmp ending
-
+division:
+	mov num1,eax
+	mov num2,ebx
+	finit
+	fild num1
+	fild num2
+	fdivp
+	fst resultDiv
+	jmp ending
 ending:
+	fld resultDiv
+	fldz
+	fcomip st(0),st(1)
+	jnz @F					;division was made
 	mov eax,ecx
+	jmp divNotMade
+@@:
+	mov eax,0
+divNotMade:
+	
 	pop ebx
 	pop ebp
 	ret
@@ -111,11 +134,21 @@ CalculateByString proc
 
 	call CalculateByVar
 	add esp,12
+	cmp eax,0
+	jne @F ;division was not made
+	finit
+	fld resultDiv
+	mov eax,dword ptr[ebp+12]
+	fst real8 ptr[eax]
+	xor eax,eax
+	;mov real8 ptr[ebp+12],resultDiv
+@@:
 	pop ebp
 	ret
 CalculateByString endp
 
 CountPowerFactor proc ;function counts power factor (1,10,100,1000) from number literal
+	;it determines how many digits number has
 	push ebp
 	mov ebp,esp
 	push esi
